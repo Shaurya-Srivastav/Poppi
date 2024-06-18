@@ -1,0 +1,40 @@
+/* src/LoginPage.css */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#LoginPage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #0033A0;
+  position: relative;
+}
+
+#header {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  right: 25%;
+}
+
+.TopBubble {
+  width: 150%;
+  height: auto;
+}
+
+#footer {
+  position: absolute;
+  bottom: 0;
+  right: 25%;
+  width: 100%;
+}
+
+.BottomBubble {
+  width: 150%;
+  height: auto;
+}
