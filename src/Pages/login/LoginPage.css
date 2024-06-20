@@ -1,13 +1,22 @@
 /* src/LoginPage.css */
 
+@import url('https://fonts.googleapis.com/css2?family=Hind+Vadodara:wght@400;700&display=swap');
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  font-family: 'Hind Vadodara', sans-serif;
+  overflow: hidden; /* Prevent overflow */
+}
+
 #LoginPage {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
@@ -15,26 +24,105 @@
   position: relative;
 }
 
-#header {
-  position: absolute;
-  top: 0;
+#header, #footer {
   width: 100%;
-  right: 25%;
+  position: absolute;
 }
 
-.TopBubble {
-  width: 150%;
+.TopBubble, .BottomBubble {
+  width: 100%; /* Increase width */
   height: auto;
+}
+
+#header {
+  top: 0;
 }
 
 #footer {
-  position: absolute;
   bottom: 0;
-  right: 25%;
-  width: 100%;
 }
 
-.BottomBubble {
-  width: 150%;
-  height: auto;
+#formContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  width: 100%;
+  transition: transform 0.6s ease-in-out;
+}
+
+#formContainer.creating-account {
+  transform: translateY(-20%);
+}
+
+.form {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  transition: transform 0.6s ease-in-out;
+}
+
+.form h1 {
+  font-size: 1.5em;
+  margin-bottom: 20px;
+}
+
+.form label {
+  display: block;
+  text-align: left;
+  margin: 10px 0 5px;
+}
+
+.form input[type="text"],
+.form input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.passwordContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.eyeIcon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.form button {
+  background-color: #0033A0;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.form a {
+  display: block;
+  color: #0033A0;
+  margin: 10px 0;
+  text-decoration: none;
+}
+
+.form hr {
+  border: none;
+  height: 1px;
+  background-color: #ccc;
+  margin: 20px 0;
+}
+
+.form a:last-child {
+  font-weight: bold;
 }
