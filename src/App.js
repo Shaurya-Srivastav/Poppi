@@ -1,20 +1,27 @@
+// src/App.js
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import LoginPage from './Pages/login/LoginPage';
 import Dashboard from './Pages/dashboard/Dashboard';
+import LoginPage from './Pages/login/LoginPage';
+import ProtectedRoute from './ProtectedRoute';
 import './App.css';
 
-function App() {
+const App = () => {
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<LoginPage />} />
+        <Route path="/" element={<LoginPage />} />
+      </Routes>
     </Router>
   );
-}
+};
 
 export default App;
