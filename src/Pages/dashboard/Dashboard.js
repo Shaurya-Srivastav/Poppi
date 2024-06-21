@@ -6,8 +6,9 @@ import './Dashboard.css';
 import UnitedWhiteLogo from "../../Assets/UnitedWhiteLogo.png";
 import { FaBars, FaSignOutAlt, FaSyncAlt, FaTimes, FaTrash } from 'react-icons/fa';
 import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import ChatPage from './ChatPage';
 
 const Dashboard = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [workbookName, setWorkbookName] = useState("");
   const [workbookDescription, setWorkbookDescription] = useState("");
   const [workbooks, setWorkbooks] = useState([]);
+  const [selectedWorkbook, setSelectedWorkbook] = useState(null);
   const navigate = useNavigate();
   const auth = getAuth();
 
@@ -22,23 +24,23 @@ const Dashboard = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         navigate('/login');
+      } else {
+        fetchWorkbooks(user.uid);
       }
     });
 
-    // Fetch workbooks from Firestore
-    const fetchWorkbooks = async () => {
-      const querySnapshot = await getDocs(collection(db, "workbooks"));
-      const workbooksData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setWorkbooks(workbooksData);
-    };
-
-    fetchWorkbooks();
-
     return () => unsubscribe();
   }, [auth, navigate]);
+
+  const fetchWorkbooks = async (userId) => {
+    const workbooksQuery = query(collection(db, "workbooks"), where("userId", "==", userId));
+    const querySnapshot = await getDocs(workbooksQuery);
+    const workbooksData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setWorkbooks(workbooksData);
+  };
 
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
@@ -49,9 +51,14 @@ const Dashboard = () => {
   };
 
   const handleSubmit = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
     const newWorkbook = {
       name: workbookName,
       description: workbookDescription,
+      userId: user.uid,
+      createdAt: new Date().toISOString()
     };
     try {
       const docRef = await addDoc(collection(db, "workbooks"), newWorkbook);
@@ -68,13 +75,23 @@ const Dashboard = () => {
     try {
       await deleteDoc(doc(db, "workbooks", id));
       setWorkbooks(workbooks.filter(workbook => workbook.id !== id));
+
+      // Delete associated chats
+      const chatsQuery = query(collection(db, "chats"), where("workbookId", "==", id));
+      const chatsSnapshot = await getDocs(chatsQuery);
+      chatsSnapshot.forEach(async (chatDoc) => {
+        await deleteDoc(doc(db, "chats", chatDoc.id));
+      });
     } catch (error) {
       console.error('Error deleting document: ', error);
     }
   };
 
   const handleRefresh = () => {
-    window.location.reload();
+    const user = auth.currentUser;
+    if (user) {
+      fetchWorkbooks(user.uid);
+    }
   };
 
   const handleSignOut = async () => {
@@ -83,6 +100,19 @@ const Dashboard = () => {
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleCardClick = (workbook) => {
+    setSelectedWorkbook(workbook);
+  };
+
+  const closeChatPage = () => {
+    setSelectedWorkbook(null);
+    // Refresh workbooks to get any updates
+    const user = auth.currentUser;
+    if (user) {
+      fetchWorkbooks(user.uid);
     }
   };
 
@@ -97,8 +127,8 @@ const Dashboard = () => {
         <button className="create-workbook-button" onClick={togglePopup}>Create Workbook</button>
         <div className="cards-container">
           {workbooks.map((workbook) => (
-            <div className="card" key={workbook.id}>
-              <FaTrash className="delete-icon" onClick={() => handleDelete(workbook.id)} />
+            <div className="card" key={workbook.id} onClick={() => handleCardClick(workbook)}>
+              <FaTrash className="delete-icon" onClick={(e) => { e.stopPropagation(); handleDelete(workbook.id); }} />
               <h4>{workbook.name}</h4>
               <p>{workbook.description.split(".")[0]}.</p>
             </div>
@@ -146,6 +176,13 @@ const Dashboard = () => {
             <p>Submit Bugs</p>
           </div>
         </>
+      )}
+
+      {selectedWorkbook && (
+        <ChatPage 
+          workbook={selectedWorkbook} 
+          onClose={closeChatPage}
+        />
       )}
     </div>
   );
