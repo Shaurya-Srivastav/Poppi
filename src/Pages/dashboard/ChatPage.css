@@ -51,6 +51,39 @@
   overflow: hidden; /* Hide overflow */
 }
 
+.chat-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.create-chat-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.create-chat-button:hover {
+  background-color: #45a049;
+}
+
+.clear-history-button {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.clear-history-button:hover {
+  background-color: #c9302c;
+}
+
 .chat-history {
   flex-grow: 1;
   overflow-y: auto; /* Enable vertical scrolling */
@@ -140,6 +173,7 @@
 .messages::-webkit-scrollbar-track {
   background-color: #f1f1f1;
 }
+
 .chat-history-item {
   background-color: #ffffff;
   border: 1px solid #ddd;
@@ -154,8 +188,54 @@
   background-color: #f0f0f0;
 }
 
+.chat-history-name {
+  font-size: 1em;
+  font-weight: bold;
+}
+
 .chat-history-date {
   text-align: center;
   font-size: 0.9em;
   color: #666;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.popup {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.popup input {
+  padding: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+  max-width: 300px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.popup button {
+  padding: 10px 20px;
+  background-color: #0033A0;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
