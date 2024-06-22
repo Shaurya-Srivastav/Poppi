@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaCode } from 'react-icons/fa';
 import './ChatPage.css';
-import ChatHistoryItem from '../../components/ChatHistoryItem';
 import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
+
+const ChatHistoryItem = ({ date, name, onClick, disabled }) => (
+  <div 
+    className={`chat-history-item ${disabled ? 'disabled' : ''}`} 
+    onClick={disabled ? null : onClick}
+    style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+    title={disabled ? "Can't switch chats while bot is responding" : ""}
+  >
+    <p className="chat-history-name">{name}</p>
+    <small className="chat-history-date">{date}</small>
+  </div>
+);
 
 const ChatPage = ({ workbook, onClose }) => {
   const [chatHistory, setChatHistory] = useState([]);
@@ -14,6 +25,9 @@ const ChatPage = ({ workbook, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [newChatName, setNewChatName] = useState("");
+  const [isBotResponding, setIsBotResponding] = useState(false);
+  const [isCodePopupOpen, setIsCodePopupOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -51,10 +65,10 @@ const ChatPage = ({ workbook, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const createNewChat = async () => {
+  const createNewChat = async (name = "New Chat") => {
     const newChat = {
       workbookId: workbook.id,
-      name: "New Chat",
+      name: name,
       createdAt: new Date().toISOString(),
       messages: []
     };
@@ -62,28 +76,23 @@ const ChatPage = ({ workbook, onClose }) => {
     const chatWithId = { ...newChat, id: docRef.id };
     setChatHistory(prevHistory => [chatWithId, ...prevHistory]);
     setCurrentChat(chatWithId);
+    setMessages([]);
     return chatWithId;
   };
 
-  const handleSendMessage = async () => {
-    if (newMessage.trim() !== "") {
+  const handleSendMessage = async (content = newMessage) => {
+    if (content.trim() !== "" && !isBotResponding) {
       if (!currentChat) {
-        const newChat = await createNewChat();
-        setCurrentChat(newChat);
         setIsPopupOpen(true);
         return;
       }
 
-      if (!currentChat.name) {
-        setIsPopupOpen(true);
-        return;
-      }
-
-      const userMessage = { role: 'user', content: newMessage };
-      const updatedMessages = [...(currentChat.messages || []), userMessage];
+      const userMessage = { role: 'user', content: content };
+      const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
       setNewMessage("");
       setIsLoading(true);
+      setIsBotResponding(true);
 
       try {
         const response = await axios.post('http://localhost:5000/chat', {
@@ -112,41 +121,57 @@ const ChatPage = ({ workbook, onClose }) => {
         setMessages(prevMessages => [...prevMessages, errorMessage]);
       } finally {
         setIsLoading(false);
+        setIsBotResponding(false);
       }
     }
   };
 
   const handleChatNameSubmit = async () => {
     if (newChatName.trim() !== "") {
-      await updateDoc(doc(db, "chats", currentChat.id), { name: newChatName });
-      setCurrentChat(prevChat => ({ ...prevChat, name: newChatName }));
+      const chat = await createNewChat(newChatName);
+      setCurrentChat(chat);
       setIsPopupOpen(false);
       setNewChatName("");
     }
   };
 
-  const handleCreateNewChat = async () => {
-    const newChat = await createNewChat();
-    setCurrentChat(newChat);
+  const handleCreateNewChat = () => {
+    setCurrentChat(null);
+    setMessages([]);
+    setIsPopupOpen(true);
   };
 
   const loadChat = (chat) => {
-    setCurrentChat(chat);
-    setMessages(chat.messages);
+    if (!isBotResponding) {
+      setCurrentChat(chat);
+      setMessages(chat.messages || []);
+    }
   };
 
   const clearChatHistory = async () => {
-    try {
-      const chatsQuery = query(collection(db, "chats"), where("workbookId", "==", workbook.id));
-      const querySnapshot = await getDocs(chatsQuery);
-      querySnapshot.forEach(async (chatDoc) => {
-        await deleteDoc(doc(db, "chats", chatDoc.id));
-      });
-      setChatHistory([]);
-      setCurrentChat(null);
-      setMessages([]);
-    } catch (error) {
-      console.error('Error clearing chat history:', error);
+    if (!isBotResponding) {
+      try {
+        const chatsQuery = query(collection(db, "chats"), where("workbookId", "==", workbook.id));
+        const querySnapshot = await getDocs(chatsQuery);
+        querySnapshot.forEach(async (chatDoc) => {
+          await deleteDoc(doc(db, "chats", chatDoc.id));
+        });
+        setChatHistory([]);
+        setCurrentChat(null);
+        setMessages([]);
+      } catch (error) {
+        console.error('Error clearing chat history:', error);
+      }
+    }
+  };
+
+  const handleCodeSubmit = () => {
+    if (codeInput.trim() !== "") {
+      const codeMessage = { role: 'user', content: `\`\`\`\n${codeInput}\n\`\`\`` };
+      setMessages(prevMessages => [...prevMessages, codeMessage]);
+      setCodeInput("");
+      setIsCodePopupOpen(false);
+      handleSendMessage(codeMessage.content);
     }
   };
 
@@ -154,15 +179,34 @@ const ChatPage = ({ workbook, onClose }) => {
     <div className="chat-page">
       <div className="chat-header">
         <h3>{workbook.name}</h3>
+        <button 
+          className="chat-with-code-button"
+          onClick={() => setIsCodePopupOpen(true)}
+          disabled={isBotResponding}
+        >
+          <FaCode /> Chat with Code
+        </button>
         <FaTimes className="close-icon" onClick={onClose} />
       </div>
       <div className="chat-container">
         <div className="chat-sidebar">
           <div className="sidebar-content">
-            <button className="create-chat-button" onClick={handleCreateNewChat}>Create New Chat</button>
+            <button 
+              className="create-chat-button" 
+              onClick={handleCreateNewChat}
+              disabled={isBotResponding}
+            >
+              Create New Chat
+            </button>
             <div className="chat-history-header">
               <h4>Chat History</h4>
-              <button className="clear-history-button" onClick={clearChatHistory}>Clear History</button>
+              <button 
+                className="clear-history-button" 
+                onClick={clearChatHistory}
+                disabled={isBotResponding}
+              >
+                Clear History
+              </button>
             </div>
             <div className="chat-history">
               {chatHistory.map((chat) => (
@@ -171,6 +215,7 @@ const ChatPage = ({ workbook, onClose }) => {
                   date={new Date(chat.createdAt).toLocaleString()}
                   name={chat.name || "Unnamed Chat"}
                   onClick={() => loadChat(chat)}
+                  disabled={isBotResponding}
                 />
               ))}
             </div>
@@ -193,8 +238,9 @@ const ChatPage = ({ workbook, onClose }) => {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={isBotResponding}
             />
-            <button onClick={handleSendMessage} disabled={isLoading}>Send</button>
+            <button onClick={() => handleSendMessage()} disabled={isLoading || isBotResponding}>Send</button>
           </div>
         </div>
       </div>
@@ -211,6 +257,23 @@ const ChatPage = ({ workbook, onClose }) => {
               onChange={(e) => setNewChatName(e.target.value)}
             />
             <button onClick={handleChatNameSubmit}>Submit</button>
+          </div>
+        </div>
+      )}
+
+      {isCodePopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup code-popup">
+            <FaTimes className="close-icon" onClick={() => setIsCodePopupOpen(false)} />
+            <h3>Insert Code</h3>
+            <div className="code-input-container">
+              <textarea
+                placeholder="Paste your code here..."
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value)}
+              />
+              <button onClick={handleCodeSubmit}>Submit</button>
+            </div>
           </div>
         </div>
       )}
